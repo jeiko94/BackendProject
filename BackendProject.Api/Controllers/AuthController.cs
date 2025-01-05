@@ -21,13 +21,33 @@ namespace BackendProject.Api.Controllers
         {
             try
             {
-                var roles = dto.Roles; //Proveedor, Distribuidor Vendedor
-                var userId = await _authServices.SignUpAsync(dto.Nombre,dto.Email, dto.Password, roles);
-                return Ok($"Usuario creado con Id = {userId}");
+                //var roles = dto.Roles; //Proveedor, Distribuidor Vendedor
+                var userId = await _authServices.SignUpAsync(dto.Nombre,dto.Email, dto.Password, dto.Roles);
+                
+                //Retornar el JSON con exito y mensaje
+                return Ok(new
+                {
+                    exito = true,
+                    mensaje = "Usuario registrado con éxito",
+                });
             }
             catch (InvalidOperationException ex)
             {
-                return Conflict(ex.Message);
+                //Ejmplo: email repetido. Devolvemos un JSON indicando el error
+                return Conflict(new
+                {
+                    exito = false,
+                    mensaje = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                // Manejo de excepciones generales si deseas
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    exito = false,
+                    mensaje = ex.Message
+                });
             }
         }
 
@@ -36,19 +56,25 @@ namespace BackendProject.Api.Controllers
         public async Task<IActionResult> SignIn([FromBody] SignInDto dto)
         {
             var usuario = await _authServices.SignInAsync(dto.Email, dto.Password);
-            if(usuario == null)
-                return Unauthorized("Email o contraseña incorrectos");
+            if (usuario == null)
+            {
+                // Credenciales inválidas
+                return BadRequest(new
+                {
+                    exito = false,
+                    mensaje = "Credenciales inválidas."
+                });
+            }
 
-            // P.ej. retornar info básica, o un token JWT
-            // Por simplicidad devolvemos roles y un pseudo token
-            var roles = usuario.UsuarioRoles.Select(ur => ur.Rol.Nombre).ToList();
+            // Si es exitoso
+            // Ejemplo: "Bienvenido, Carmen!"
             return Ok(new
             {
-                UsuarioId = usuario.Id,
-                Nombre = usuario.Nombre,
-                Roles = roles
-                // Falta un token real si queremos JWT
+                exito = true,
+                mensaje = $"Bienvenido, {usuario.Nombre}!",
+                usuarioId = usuario.Id
             });
         }
+
     }
 }
